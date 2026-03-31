@@ -85,6 +85,36 @@ def getOrientation(sense):
     }
 
 #  LED indicator 
+RING = [
+    (0,0),(1,0),(2,0),(3,0),(4,0),(5,0),(6,0),(7,0),
+    (7,1),(7,2),(7,3),(7,4),(7,5),(7,6),(7,7),
+    (6,7),(5,7),(4,7),(3,7),(2,7),(1,7),(0,7),
+    (0,6),(0,5),(0,4),(0,3),(0,2),(0,1)
+]
+
+def animateIdle(sense, temperature, steps=1):
+    if temperature < 20:
+        colour = (0, 0, 255)
+    elif temperature < 30:
+        colour = (0, 255, 100)
+    else:
+        colour = (255, 60, 0)
+
+    tail_length = 5
+    total = len(RING)
+
+    for step in range(steps):
+        sense.clear()
+        head = step % total
+        for i in range(tail_length):
+            idx = (head - i) % total
+            x, y = RING[idx]
+            brightness = int(255 * (tail_length - i) / tail_length)
+            r = int(colour[0] * brightness / 255)
+            g = int(colour[1] * brightness / 255)
+            b = int(colour[2] * brightness / 255)
+            sense.set_pixel(x, y, r, g, b)
+        time.sleep(0.05)
 
 def animatePublish(sense):
     frames = [
@@ -150,6 +180,8 @@ def main():
     sense.show_message("OK", text_colour=(0, 255, 0))
 
     while True:
+        animateIdle(sense, last_temp if 'last_temp' in dir() else 25, steps=10)
+
         try:
             timestamp   = datetime.now().isoformat()
             colour      = getColour(sense)
