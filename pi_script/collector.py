@@ -116,6 +116,7 @@ def animateIdle(sense, temperature, step=0):
         idx = (head - i) % total
         x, y = RING[idx]
         brightness = (tail_length - i) / tail_length
+        # Оранжевый хвост с цветовым оттенком по температуре
         r = int(((255 * brightness) + base[0]) / 2)
         g = int(((120 * brightness) + base[1]) / 2)
         b = int(((0   * brightness) + base[2]) / 2)
