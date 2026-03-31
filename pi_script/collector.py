@@ -92,29 +92,29 @@ RING = [
     (0,6),(0,5),(0,4),(0,3),(0,2),(0,1)
 ]
 
-def animateIdle(sense, temperature, steps=1):
+def animateIdle(sense, temperature, step=0):
     if temperature < 20:
-        colour = (0, 0, 255)
+        base = (0, 80, 255)
     elif temperature < 30:
-        colour = (0, 255, 100)
+        base = (0, 200, 80)
     else:
-        colour = (255, 60, 0)
+        base = (255, 80, 0)
 
     tail_length = 5
     total = len(RING)
+    head = step % total
 
-    for step in range(steps):
-        sense.clear()
-        head = step % total
-        for i in range(tail_length):
-            idx = (head - i) % total
-            x, y = RING[idx]
-            brightness = int(255 * (tail_length - i) / tail_length)
-            r = int(colour[0] * brightness / 255)
-            g = int(colour[1] * brightness / 255)
-            b = int(colour[2] * brightness / 255)
-            sense.set_pixel(x, y, r, g, b)
-        time.sleep(0.05)
+    sense.clear()
+    for i in range(tail_length):
+        idx = (head - i) % total
+        x, y = RING[idx]
+        brightness = (tail_length - i) / tail_length
+        # Оранжевый хвост с цветовым оттенком по температуре
+        r = int(((255 * brightness) + base[0]) / 2)
+        g = int(((120 * brightness) + base[1]) / 2)
+        b = int(((0   * brightness) + base[2]) / 2)
+        sense.set_pixel(x, y, min(r,255), min(g,255), min(b,255))
+    time.sleep(0.05)
 
 def animatePublish(sense):
     frames = [
@@ -179,9 +179,8 @@ def main():
     log.info("Starting data collection every %ds", config['sample_interval_seconds'])
     sense.show_message("OK", text_colour=(0, 255, 0))
 
+    last_temp = 25
     while True:
-        animateIdle(sense, last_temp if 'last_temp' in dir() else 25, steps=10)
-
         try:
             timestamp   = datetime.now().isoformat()
             colour      = getColour(sense)
@@ -213,12 +212,14 @@ def main():
 
             animatePublish(sense)
 
-
         except Exception as e:
             log.error("Error: %s", e)
             animateError(sense)
 
-        time.sleep(config['sample_interval_seconds'])
+        steps_per_second = 10
+        total_steps = config['sample_interval_seconds'] * steps_per_second
+        for step in range(total_steps):
+            animateIdle(sense, last_temp, step=step)
 
 if __name__ == '__main__':
     main()
