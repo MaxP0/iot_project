@@ -2,6 +2,7 @@ import json
 import time
 import sqlite3
 import logging
+import ssl
 from datetime import datetime
 from sense_hat import SenseHat
 import paho.mqtt.client as mqtt
@@ -14,7 +15,7 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 #  Load config 
-def load_config(path='/home/nci/IoT-Project/config/config.json'):
+def load_config(path='/home/nci/iot_project/config/config.json'):
     with open(path, 'r') as f:
         return json.load(f)
 
@@ -45,6 +46,7 @@ def init_db(db_path):
     return conn
 
 def save_to_db(conn, reading):
+    """Save a single sensor reading to the local SQLite database."""
     conn.execute('''
         INSERT INTO sensor_readings (
             timestamp, device_id, latitude, longitude,
@@ -92,7 +94,7 @@ def flashLED(sense, success=True):
 #  MQTT callbacks 
 def on_connect(client, userdata, flags, reason_code, properties):
     if reason_code == 0:
-        log.info("Connected to MQTT broker")
+        log.info("Connected to MQTT broker (TLS)")
     else:
         log.error("MQTT connection failed: %s", reason_code)
 
@@ -101,8 +103,10 @@ def on_publish(client, userdata, mid, reason_code, properties):
 
 #  Main loop 
 def main():
-    config   = load_config()
-    sense    = SenseHat()
+    config = load_config()
+    mqtt_cfg = config['mqtt']
+
+    sense = SenseHat()
     sense.colour.gain = 64
     sense.colour.integration_cycles = 64
 
@@ -112,11 +116,13 @@ def main():
     # Database
     db_conn = init_db(config['database']['path'])
 
-    # MQTT client
+    # MQTT client with TLS
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+    client.username_pw_set(mqtt_cfg['username'], mqtt_cfg['password'])
+    client.tls_set(tls_version=ssl.PROTOCOL_TLS_CLIENT)
     client.on_connect = on_connect
     client.on_publish = on_publish
-    client.connect(config['mqtt']['broker'], config['mqtt']['port'], keepalive=60)
+    client.connect(mqtt_cfg['broker'], mqtt_cfg['port'], keepalive=60)
     client.loop_start()
 
     log.info("Starting data collection every %ds", config['sample_interval_seconds'])
@@ -129,10 +135,10 @@ def main():
             orientation = getOrientation(sense)
 
             reading = {
-                'timestamp':  timestamp,
-                'device_id':  config['device_id'],
-                'latitude':   config['latitude'],
-                'longitude':  config['longitude'],
+                'timestamp':   timestamp,
+                'device_id':   config['device_id'],
+                'latitude':    config['latitude'],
+                'longitude':   config['longitude'],
                 'temperature': getTemperature(sense),
                 'humidity':    getHumidity(sense),
                 'pressure':    getPressure(sense),
@@ -145,16 +151,13 @@ def main():
                 'yaw':         orientation['yaw'],
             }
 
-            # Save locally
             save_to_db(db_conn, reading)
             log.info("Saved to DB: temp=%.1f  hum=%.1f  pres=%.1f",
                      reading['temperature'], reading['humidity'], reading['pressure'])
 
-            # Publish to cloud
             payload = json.dumps(reading)
-            client.publish(config['mqtt']['topic'], payload, qos=1)
+            client.publish(mqtt_cfg['topic'], payload, qos=1)
 
-            # Flash green = success
             flashLED(sense, success=True)
 
         except Exception as e:
