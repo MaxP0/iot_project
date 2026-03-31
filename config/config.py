@@ -3,7 +3,7 @@
     "latitude": 53.3498,
     "longitude": -6.2603,
     "location": "Dublin, Ireland",
-    "sample_interval_seconds": 5,
+    "sample_interval_seconds": 3,
     "mqtt": {
         "broker": "80882c6eea124859ae093487116d8556.s1.eu.hivemq.cloud",
         "port": 8883,
