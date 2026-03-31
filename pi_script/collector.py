@@ -85,11 +85,62 @@ def getOrientation(sense):
     }
 
 #  LED indicator 
-def flashLED(sense, success=True):
-    colour = (0, 255, 0) if success else (255, 0, 0)
-    sense.clear(colour)
-    time.sleep(0.2)
+RING = [
+    (0,0),(1,0),(2,0),(3,0),(4,0),(5,0),(6,0),(7,0),
+    (7,1),(7,2),(7,3),(7,4),(7,5),(7,6),(7,7),
+    (6,7),(5,7),(4,7),(3,7),(2,7),(1,7),(0,7),
+    (0,6),(0,5),(0,4),(0,3),(0,2),(0,1)
+]
+
+def animateIdle(sense, temperature, steps=1):
+    if temperature < 20:
+        colour = (0, 0, 255)
+    elif temperature < 30:
+        colour = (0, 255, 100)
+    else:
+        colour = (255, 60, 0)
+
+    tail_length = 5
+    total = len(RING)
+
+    for step in range(steps):
+        sense.clear()
+        head = step % total
+        for i in range(tail_length):
+            idx = (head - i) % total
+            x, y = RING[idx]
+            brightness = int(255 * (tail_length - i) / tail_length)
+            r = int(colour[0] * brightness / 255)
+            g = int(colour[1] * brightness / 255)
+            b = int(colour[2] * brightness / 255)
+            sense.set_pixel(x, y, r, g, b)
+        time.sleep(0.05)
+
+def animatePublish(sense):
+    frames = [
+        [(3,3),(4,3),(3,4),(4,4)],
+        [(3,2),(4,2),(2,3),(5,3),(2,4),(5,4),(3,5),(4,5)],
+        [(3,1),(4,1),(2,2),(5,2),(1,3),(6,3),(1,4),(6,4),(2,5),(5,5),(3,6),(4,6)],
+    ]
+    for frame in frames:
+        sense.clear()
+        for x, y in frame:
+            sense.set_pixel(x, y, 0, 255, 100)
+        time.sleep(0.1)
     sense.clear()
+
+def animateError(sense):
+    x_pattern = [
+        (0,0),(1,1),(2,2),(3,3),(4,4),(5,5),(6,6),(7,7),
+        (7,0),(6,1),(5,2),(4,3),(3,4),(2,5),(1,6),(0,7)
+    ]
+    for _ in range(3):
+        sense.clear()
+        for px, py in x_pattern:
+            sense.set_pixel(px, py, 255, 0, 0)
+        time.sleep(0.2)
+        sense.clear()
+        time.sleep(0.2)
 
 #  MQTT callbacks 
 def on_connect(client, userdata, flags, reason_code, properties):
@@ -129,6 +180,8 @@ def main():
     sense.show_message("OK", text_colour=(0, 255, 0))
 
     while True:
+        animateIdle(sense, last_temp if 'last_temp' in dir() else 25, steps=10)
+
         try:
             timestamp   = datetime.now().isoformat()
             colour      = getColour(sense)
@@ -158,11 +211,12 @@ def main():
             payload = json.dumps(reading)
             client.publish(mqtt_cfg['topic'], payload, qos=1)
 
-            flashLED(sense, success=True)
+            animatePublish(sense)
+
 
         except Exception as e:
             log.error("Error: %s", e)
-            flashLED(sense, success=False)
+            animateError(sense)
 
         time.sleep(config['sample_interval_seconds'])
 
