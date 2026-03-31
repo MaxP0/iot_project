@@ -5,11 +5,13 @@
     "location": "Dublin, Ireland",
     "sample_interval_seconds": 5,
     "mqtt": {
-        "broker": "broker.hivemq.com",
-        "port": 1883,
-        "topic": "iot/maks/sensors"
+        "broker": "80882c6eea124859ae093487116d8556.s1.eu.hivemq.cloud",
+        "port": 8883,
+        "topic": "iot/maks/sensors",
+        "username": "myraspberrypi",
+        "password": "Sample1111"
     },
     "database": {
-        "path": "/home/nci/IoT-Project/data/sensors.db"
+        "path": "/home/nci/iot_project/data/sensors.db"
     }
 }
