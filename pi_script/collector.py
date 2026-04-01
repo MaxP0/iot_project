@@ -64,7 +64,14 @@ def save_to_db(conn, reading):
 
 #  Sensors 
 def getTemperature(sense):
-    return round(sense.get_temperature(), 2)
+    cpu_temp = getCPUTemperature()
+    raw_temp = sense.get_temperature()
+    calibrated = raw_temp - ((cpu_temp - raw_temp) / 1.5)
+    return round(calibrated, 2)
+
+def getCPUTemperature():
+    with open('/sys/class/thermal/thermal_zone0/temp', 'r') as f:
+        return float(f.read()) / 1000
 
 def getHumidity(sense):
     return round(sense.get_humidity(), 2)
@@ -109,7 +116,6 @@ def animateIdle(sense, temperature, step=0):
         idx = (head - i) % total
         x, y = RING[idx]
         brightness = (tail_length - i) / tail_length
-        # Оранжевый хвост с цветовым оттенком по температуре
         r = int(((255 * brightness) + base[0]) / 2)
         g = int(((120 * brightness) + base[1]) / 2)
         b = int(((0   * brightness) + base[2]) / 2)
