@@ -64,14 +64,7 @@ def save_to_db(conn, reading):
 
 #  Sensors 
 def getTemperature(sense):
-    cpu_temp = getCPUTemperature()
-    raw_temp = sense.get_temperature()
-    calibrated = raw_temp - ((cpu_temp - raw_temp) / 1.5)
-    return round(calibrated, 2)
-
-def getCPUTemperature():
-    with open('/sys/class/thermal/thermal_zone0/temp', 'r') as f:
-        return float(f.read()) / 1000
+    return round(sense.get_temperature(), 2)
 
 def getHumidity(sense):
     return round(sense.get_humidity(), 2)
